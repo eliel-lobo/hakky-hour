@@ -27,7 +27,9 @@ class HakkyHour(maxDrinkCount: Int) extends Actor with ActorLogging {
     case CreateGuests(favoriteDrink) =>
       val duration = getDuration("hakky-hour.guest.finish-drink-duration")
       log.info(s"duration is: $duration")
-      createGuest(waiter, favoriteDrink, duration)
+      val guest: ActorRef = createGuest(waiter, favoriteDrink, duration)
+      context.watch(guest)
+
     case ApproveDrink(drink, guest) =>
       val guestName: String = guest.path.name
       val drinkCount = numberOfDrinksPerGuest.get(guestName).getOrElse(0);
@@ -38,6 +40,11 @@ class HakkyHour(maxDrinkCount: Int) extends Actor with ActorLogging {
         numberOfDrinksPerGuest = numberOfDrinksPerGuest + (guestName -> (drinkCount + 1))
         barkeeper ! PrepareDrink(drink, guest)
       }
+
+    case Terminated(guest) =>
+      val guestName: String = guest.path.name
+      log.info(s"Thanks, ${guestName}, for being our guest!")
+      numberOfDrinksPerGuest = numberOfDrinksPerGuest - guestName
   }
 
   def createBarkeeper(): ActorRef = {
