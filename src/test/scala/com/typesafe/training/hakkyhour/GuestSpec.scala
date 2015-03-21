@@ -2,8 +2,9 @@ package com.typesafe.training.hakkyhour
 
 import akka.testkit.{ TestActorRef, TestProbe }
 import com.typesafe.training.hakkyhour.Drink.Akkarita
-import com.typesafe.training.hakkyhour.Guest.DrinkServed
-import com.typesafe.training.hakkyhour.Waiter.ServeDrink
+import com.typesafe.training.hakkyhour.actors.{Waiter, Guest}
+import Guest.DrinkServed
+import Waiter.ServeDrink
 
 import scala.concurrent.duration._
 /**

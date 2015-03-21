@@ -7,6 +7,7 @@ package com.typesafe.training.hakkyhour
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.Logging
 import com.typesafe.training.hakkyhour.Drink.Akkarita
+import com.typesafe.training.hakkyhour.actors.HakkyHour
 import scala.annotation.tailrec
 import scala.collection.breakOut
 import scala.io.StdIn
@@ -36,6 +37,7 @@ object HakkyHourApp {
 class HakkyHourApp(system: ActorSystem) extends Terminal {
 
   private val log = Logging(system, getClass.getName)
+  private val maxDrinkCount = system.settings.config.getInt("hakky-hour.max-drink-count")
 
   log.info("Hakky Hour is open!")
 
@@ -48,7 +50,7 @@ class HakkyHourApp(system: ActorSystem) extends Terminal {
   }
 
   protected def createHakkyHour(): ActorRef =
-    system.actorOf(HakkyHour.props, "hakky-hour")
+    system.actorOf(HakkyHour.props(maxDrinkCount), "hakky-hour")
 
   @tailrec
   private def commandLoop(): Unit =

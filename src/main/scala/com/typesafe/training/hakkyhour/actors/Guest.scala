@@ -1,8 +1,9 @@
-package com.typesafe.training.hakkyhour
+package com.typesafe.training.hakkyhour.actors
 
-import akka.actor.{ ActorRef, ActorLogging, Actor, Props }
-import com.typesafe.training.hakkyhour.Guest.{ DrinkFinished, DrinkServed }
-import com.typesafe.training.hakkyhour.Waiter.ServeDrink
+import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import com.typesafe.training.hakkyhour.Drink
+import Waiter.ServeDrink
+import com.typesafe.training.hakkyhour.actors.Guest.{ DrinkServed, DrinkFinished }
 
 import scala.concurrent.duration.FiniteDuration
 
@@ -35,4 +36,7 @@ class Guest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteD
 
     case DrinkFinished => waiter ! ServeDrink(favoriteDrink)
   }
+
+  @throws[Exception](classOf[Exception])
+  override def postStop(): Unit = log.info("Good bye!")
 }
