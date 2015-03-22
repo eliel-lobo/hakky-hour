@@ -1,42 +1,56 @@
 package com.typesafe.training.hakkyhour.actors
 
-import akka.actor.{ Actor, ActorLogging, ActorRef, Props }
+import akka.actor.SupervisorStrategy.Stop
+import akka.actor._
 import com.typesafe.training.hakkyhour.Drink
-import Waiter.ServeDrink
+import com.typesafe.training.hakkyhour.actors.Waiter.{ Complaint, ServeDrink }
 import com.typesafe.training.hakkyhour.actors.Guest.{ DrinkServed, DrinkFinished }
+import com.typesafe.training.hakkyhour.exception.DrunkException
 
 import scala.concurrent.duration.FiniteDuration
 
 object Guest {
-  def props(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteDuration): Props = Props(new Guest(waiter, favoriteDrink, finishDrinkDuration))
+  def props(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteDuration, maxDrinkCount: Int): Props =
+    Props(new Guest(waiter, favoriteDrink, finishDrinkDuration, maxDrinkCount))
   case class DrinkServed(drink: Drink)
   private case object DrinkFinished
 }
 
-class Guest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteDuration) extends Actor with ActorLogging {
+class Guest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteDuration, maxDrinkCount: Int) extends Actor with ActorLogging {
   import context.dispatcher
 
   var drinkCount: Int = 0
-  log.info(s"Created with drink $favoriteDrink")
+  log info s"Created with drink $favoriteDrink"
 
   self ! DrinkFinished
 
   override def receive: Receive = {
 
     case DrinkServed(drink) => {
-      drinkCount += 1
-      log info s"Enjoying my $drinkCount. yummy $drink!"
 
-      context.system.scheduler.scheduleOnce(
-        finishDrinkDuration,
-        self,
-        DrinkFinished
-      )
+      if (drink != favoriteDrink) {
+        log info s"Waiter I did not ordered $drink!"
+        waiter ! Complaint(favoriteDrink)
+      } else {
+        drinkCount += 1
+
+        if (drinkCount > maxDrinkCount)
+          throw DrunkException
+
+        if (drinkCount > 0)
+          log info s"Enjoying my $drinkCount. yummy $drink!"
+
+        context.system.scheduler.scheduleOnce(
+          finishDrinkDuration,
+          self,
+          DrinkFinished
+        )
+      }
     }
 
     case DrinkFinished => waiter ! ServeDrink(favoriteDrink)
   }
 
   @throws[Exception](classOf[Exception])
-  override def postStop(): Unit = log.info("Good bye!")
+  override def postStop(): Unit = log info "Good bye!"
 }
