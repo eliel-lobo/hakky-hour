@@ -22,12 +22,13 @@ class Guest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteD
   var drinkCount: Int = 0
   log info s"Created with drink $favoriteDrink"
 
+  var requestTime = System.currentTimeMillis()
   self ! DrinkFinished
 
   override def receive: Receive = {
 
     case DrinkServed(drink) => {
-
+      val orderDuration: Float = (System.currentTimeMillis() - requestTime) / 1000f
       if (drink != favoriteDrink) {
         log info s"Waiter I did not ordered $drink!"
         waiter ! Complaint(favoriteDrink)
@@ -38,7 +39,7 @@ class Guest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteD
           throw DrunkException
 
         if (drinkCount > 0)
-          log info s"Enjoying my $drinkCount. yummy $drink!"
+          log info s"Enjoying my $drinkCount. yummy $drink! After $orderDuration seconds"
 
         context.system.scheduler.scheduleOnce(
           finishDrinkDuration,
@@ -48,7 +49,9 @@ class Guest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteD
       }
     }
 
-    case DrinkFinished => waiter ! ServeDrink(favoriteDrink)
+    case DrinkFinished =>
+      requestTime = System.currentTimeMillis()
+      waiter ! ServeDrink(favoriteDrink)
   }
 
   @throws[Exception](classOf[Exception])

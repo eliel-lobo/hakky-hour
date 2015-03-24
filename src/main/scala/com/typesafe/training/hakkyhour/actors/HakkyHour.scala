@@ -4,6 +4,7 @@ import java.util.concurrent.TimeUnit
 
 import akka.actor.SupervisorStrategy.{ Restart, Resume, Stop }
 import akka.actor._
+import akka.routing.FromConfig
 import com.typesafe.training.hakkyhour.Drink
 import com.typesafe.training.hakkyhour.actors.Barkeeper.PrepareDrink
 import com.typesafe.training.hakkyhour.actors.HakkyHour.{ ApproveDrink, CreateGuests }
@@ -58,7 +59,7 @@ class HakkyHour(maxDrinkCount: Int) extends Actor with ActorLogging {
   }
 
   def createBarkeeper(accuracy: Int, prepareDrinkDuration: FiniteDuration): ActorRef = {
-    context.actorOf(Barkeeper.props(prepareDrinkDuration, accuracy), "barkeeper")
+    context.actorOf(Barkeeper.props(prepareDrinkDuration, accuracy).withRouter(FromConfig()), "barkeeper")
   }
 
   def createGuest(waiter: ActorRef, favoriteDrink: Drink, finishDrinkDuration: FiniteDuration, maxDrinkCount: Int) = {
