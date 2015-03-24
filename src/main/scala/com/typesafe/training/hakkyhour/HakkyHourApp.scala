@@ -6,11 +6,17 @@ package com.typesafe.training.hakkyhour
 
 import akka.actor.{ ActorRef, ActorSystem }
 import akka.event.Logging
+import akka.pattern.ask
+import akka.util.Timeout
 import com.typesafe.training.hakkyhour.Drink.Akkarita
 import com.typesafe.training.hakkyhour.actors.HakkyHour
+import com.typesafe.training.hakkyhour.actors.HakkyHour.{ HakkyHourStatus, GetStatus }
 import scala.annotation.tailrec
 import scala.collection.breakOut
+import scala.concurrent.Future
+import scala.concurrent.duration._
 import scala.io.StdIn
+import scala.util.{ Success, Failure }
 
 object HakkyHourApp {
 
@@ -36,8 +42,11 @@ object HakkyHourApp {
 
 class HakkyHourApp(system: ActorSystem) extends Terminal {
 
+  import scala.concurrent.ExecutionContext.Implicits.global
+
   private val log = Logging(system, getClass.getName)
   private val maxDrinkCount = system.settings.config.getInt("hakky-hour.max-drink-count")
+  implicit val timeout = Timeout(system.settings.config.getInt("hakky-hour.status-timeout") seconds)
 
   log.info("Hakky Hour is open!")
 
@@ -72,6 +81,14 @@ class HakkyHourApp(system: ActorSystem) extends Terminal {
     for (x <- 1 to count)
       hakkyHour ! HakkyHour.CreateGuests(favoriteDrink, maxDrinkCount)
 
-  protected def getStatus(): Unit =
-    () // TODO Ask HakkyHour for the status and log the result on completion
+  protected def getStatus(): Unit = {
+    val response: Future[HakkyHourStatus] = (hakkyHour ? GetStatus).mapTo[HakkyHourStatus]
+    response onComplete {
+      case Success(HakkyHourStatus(currentGuestsNumber)) =>
+        log info s"currently there are $currentGuestsNumber guests at the Bar!"
+      case Failure(f) =>
+        log error f.getMessage
+        f.printStackTrace()
+    }
+  }
 }
